@@ -1,18 +1,36 @@
 
 use std::fmt;
 
-pub struct Flat2dArray<T: Default + Copy> {
+pub struct Flat2dArray<T: Copy> {
   data: Vec<T>,
   width: usize,
   height: usize
 }
 
 impl<T: Default + Copy> Flat2dArray<T> {
-  pub fn new(width: usize, height: usize) -> Flat2dArray<T> {
+  pub fn new_default(width: usize, height: usize) -> Flat2dArray<T> {
     Flat2dArray {
       data: vec![T::default(); width * height],
       width: width,
       height: height
+    }
+  }
+}
+
+impl<T: Copy> Flat2dArray<T> {
+  pub fn new(width: usize, height: usize, value: T) -> Flat2dArray<T> {
+    Flat2dArray {
+      data: vec![value; width * height],
+      width: width,
+      height: height
+    }
+  }
+
+  pub fn new_zero_sized() -> Flat2dArray<T> {
+    Flat2dArray {
+      data: Vec::new(),
+      width: 0,
+      height: 0
     }
   }
 
@@ -52,6 +70,40 @@ impl<T: Default + Copy> Flat2dArray<T> {
   }
 }
 
+impl<T> From<Vec<Vec<T>>> for Flat2dArray<T>
+where T: Copy {
+  fn from(vec: Vec<Vec<T>>) -> Flat2dArray<T> {
+    let height = vec.len();
+
+    if height == 0 {
+      return Flat2dArray::new_zero_sized();
+    }
+
+    assert!(height > 0);
+
+    let first_width = vec[0].len();
+
+    if first_width == 0 {
+      return Flat2dArray::new_zero_sized();
+    }
+
+    assert!(first_width > 0);
+
+    let mut result = Flat2dArray::new( first_width, height, vec[0][0] );
+
+    for y in 0..height {
+      let width = vec[y].len();
+      assert_eq!(first_width, width);
+
+      for x in 0..width {
+        result.set(x, y, vec[y][x]);
+      }
+    }
+
+    result
+  }
+}
+
 impl<T> fmt::Display for Flat2dArray<T>
   where T: Default + Copy + fmt::Display {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -68,7 +120,7 @@ impl<T> fmt::Display for Flat2dArray<T>
 }
 
 pub fn construct_regular_matrix(width: usize, height: usize) -> Flat2dArray<usize> {
-  let mut array: Flat2dArray<usize> = Flat2dArray::new(width, height);
+  let mut array: Flat2dArray<usize> = Flat2dArray::new_default(width, height);
 
   for y in 0..height {
     for x in 0..width {
@@ -80,7 +132,7 @@ pub fn construct_regular_matrix(width: usize, height: usize) -> Flat2dArray<usiz
 }
 
 fn create_part_oblique<T>(array: &Flat2dArray<T>, start_x: usize, start_y: usize) -> Vec<T>
-where T: Default + Copy {
+where T: Copy {
 
   let mut x = start_x;
   let mut y = start_y;
@@ -118,6 +170,11 @@ where T: Default + Copy {
   result
 }
 
+pub fn de_oblique_square<T>(vec: &Vec<Vec<T>>) -> Flat2dArray<T>
+where T: Copy {
+  unimplemented!();
+}
+
 #[cfg(test)]
 mod tests {
   use std::fmt;
@@ -135,7 +192,7 @@ mod tests {
 
   #[test]
   fn test_create() {
-    let a2d: Flat2dArray<i32> = Flat2dArray::new( 5, 10 );
+    let a2d: Flat2dArray<i32> = Flat2dArray::new_default( 5, 10 );
 
     assert_eq!( 5, a2d.get_width() );
     assert_eq!( 10, a2d.get_height() );
@@ -144,7 +201,7 @@ mod tests {
   #[test]
   #[should_panic]
   fn test_out_of_bounds() {
-    let a2d: Flat2dArray<i32> = Flat2dArray::new(5, 10);
+    let a2d: Flat2dArray<i32> = Flat2dArray::new_default(5, 10);
 
     a2d.get(6, 5);
   }
@@ -169,6 +226,31 @@ mod tests {
     let vec = oblique(&array);
 
     print_obliqued_vec(&vec);
+  }
+
+  #[test]
+  fn test_from_vec() {
+    let mut vec: Vec<Vec<usize>> = Vec::new();
+    for y in 0..6 {
+      let mut part_vec: Vec<usize> = Vec::new();
+      for x in 0..7 {
+        part_vec.push(x * y);
+      }
+      vec.push(part_vec);
+    }
+
+    let vec_copy: Vec<Vec<usize>> = vec.to_vec();
+
+    let array = Flat2dArray::from(vec);
+
+    assert_eq!(6, array.get_height());
+    assert_eq!(7, array.get_width());
+
+    for y in 0..6 {
+      for x in 0..7 {
+        assert_eq!(vec_copy[y][x], array.get(x, y));
+      }
+    }
   }
 
 }
