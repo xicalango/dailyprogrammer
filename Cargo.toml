@@ -4,6 +4,3 @@ version = "0.1.0"
 authors = ["Alexander Weld <weldale@gmail.com>"]
 
 [dependencies]
-csv = "0.14.3"
-chrono = "0.2.20"
-rustc-serialize = "0.3.18"
