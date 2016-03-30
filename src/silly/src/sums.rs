@@ -52,31 +52,24 @@ struct CurrentCounter {
 impl CurrentCounter {
 
   pub fn update_count(&mut self, data: SchoolData) {
-    if self.state != data.state {
-      println!("School: {}: {}", self.school, self.school_count);
-      println!("City: {}: {}", self.city, self.city_count);
-      println!("State: {}: {}", self.state, self.state_count);
-
-      self.state = data.state;
-      self.state_count = 0;
-      self.city_count = 0;
-      self.school_count = 0;
-    }
-    
-    if self.city != data.city {
-      println!("School: {}: {}", self.school, self.school_count);
-      println!("City: {}: {}", self.city, self.city_count);
-      self.city = data.city;
-      self.city_count = 0;
-      self.school_count = 0;
-    }
-    
     if self.school != data.school {
       println!("School: {}: {}", self.school, self.school_count);
       self.school = data.school;
       self.school_count = 0;
     }
 
+    if self.city != data.city {
+      println!("City: {}: {}", self.city, self.city_count);
+      self.city = data.city;
+      self.city_count = 0;
+    }
+    
+    if self.state != data.state {
+      println!("State: {}: {}", self.state, self.state_count);
+      self.state = data.state;
+      self.state_count = 0;
+    }
+    
     self.state_count = self.state_count + data.number;
     self.city_count = self.city_count + data.number;
     self.school_count = self.school_count + data.number;
