@@ -110,8 +110,8 @@ impl<'a> Iterator for SquareIter<'a> {
   }
 }
 
-impl Square {
-  pub fn new(data: Vec<usize>) -> Square {
+impl From<Vec<usize>> for Square {
+  fn from(data: Vec<usize>) -> Square {
     let len = data.len();
     let a_candidate = (len as f64).sqrt().floor() as usize;
 
@@ -121,6 +121,69 @@ impl Square {
       a: a_candidate,
       data: data
     }
+  }
+}
+
+impl Square {
+
+  pub fn try_new(data: Vec<usize>) -> Option<Square> {
+    let len = data.len();
+    let s = ((4 * len + 1) as f64).sqrt() as usize;
+
+    let a_candidate = (s+1)/2;
+
+    assert_eq!(a_candidate * (a_candidate - 1), len);
+
+    return Square::try_complete(&data, &a_candidate);
+  }
+
+  fn try_complete(incomplete_data: &Vec<usize>, a: &usize) -> Option<Square> {
+    let mut try_data = incomplete_data.clone();
+
+    let begin_len = try_data.len();
+
+    let num_missing = (a*a) - begin_len;
+
+    let mut work_data = vec![1; num_missing];
+
+    assert_eq!(a * a, try_data.len() + work_data.len());
+
+    let mut done = false;
+
+    while !done {
+      try_data.resize( begin_len, 0 );
+      try_data.extend_from_slice( &work_data );
+
+      assert_eq!(a * a, try_data.len());
+
+      {
+        let square = Square::from(try_data.clone());
+
+        if square.is_magic() {
+          return Some(square);
+        }
+      }
+
+
+      let mut cur = 0;
+
+      loop {
+        if cur == work_data.len() {
+          done = true;
+          break;
+        }
+
+        work_data[cur] = work_data[cur] + 1;
+        if work_data[cur] > 9 {
+          work_data[cur] = 1;
+          cur = cur + 1;
+        } else {
+          break;
+        }
+      }
+    }
+
+    None
   }
 
   pub fn get_expected_sum(&self) -> usize {
@@ -189,6 +252,14 @@ impl Square {
       }
     }
   }
+
+  pub fn render(&self) {
+    println!("");
+    for i in 0..self.a {
+      println!("{:?}", self.row(i).collect::<Vec<&usize>>());
+    }
+  }
+
 }
 
 #[cfg(test)]
@@ -197,13 +268,13 @@ mod test {
   use super::*;
 
   fn test_square() -> Square {
-    Square::new(vec![8, 1, 6, 3, 5, 7, 4, 9, 2])
+    Square::from(vec![8, 1, 6, 3, 5, 7, 4, 9, 2])
   }
 
   #[test]
   #[should_panic]
   fn test_non_square() {
-    Square::new(vec![1, 2]);
+    Square::from(vec![1, 2]);
   }
 
   #[test]
@@ -230,37 +301,51 @@ mod test {
 
   #[test]
   fn test_first_example() {
-    let square = Square::new(vec![8, 1, 6, 3, 5, 7, 4, 9, 2]);
+    let square = Square::from(vec![8, 1, 6, 3, 5, 7, 4, 9, 2]);
 
-    assert_eq!(true, square.is_magic());
+    assert!(square.is_magic());
   }
 
   #[test]
   fn test_second_example() {
-    let square = Square::new(vec![2, 7, 6, 9, 5, 1, 4, 3, 8]);
+    let square = Square::from(vec![2, 7, 6, 9, 5, 1, 4, 3, 8]);
 
-    assert_eq!(true, square.is_magic());
+    assert!(square.is_magic());
   }
 
   #[test]
   fn test_third_example() {
-    let square = Square::new(vec![3, 5, 7, 8, 1, 6, 4, 9, 2]);
+    let square = Square::from(vec![3, 5, 7, 8, 1, 6, 4, 9, 2]);
 
-    assert_eq!(false, square.is_magic());
+    assert!(!square.is_magic());
   }
 
   #[test]
   fn test_fourth_example() {
-    let square = Square::new(vec![8, 1, 6, 7, 5, 3, 4, 9, 2]);
+    let square = Square::from(vec![8, 1, 6, 7, 5, 3, 4, 9, 2]);
 
-    assert_eq!(false, square.is_magic());
+    assert!(!square.is_magic());
   }
 
   #[test]
   fn test_big() {
-    let square = Square::new(vec![25, 13, 1, 19, 7, 16, 9, 22, 15, 3, 12, 5,
+    let square = Square::from(vec![25, 13, 1, 19, 7, 16, 9, 22, 15, 3, 12, 5,
             18, 6, 24, 8, 21, 14, 2, 20, 4, 17, 10, 23, 11]);
 
-    assert_eq!(true, square.is_magic());
+    assert!(square.is_magic());
+  }
+
+  #[test]
+  fn test_complete_1() {
+    let square = Square::try_new(vec![8, 1, 6, 3, 5, 7]).unwrap();
+    assert!(square.is_magic());
+    
+    square.render();
+  }
+
+  #[test]
+  #[should_panic]
+  fn test_complete_2() {
+    Square::try_new(vec![3, 5, 7, 8, 1, 6]).unwrap();
   }
 }
