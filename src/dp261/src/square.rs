@@ -17,10 +17,74 @@ pub enum Diagonal {
   Second
 }
 
+impl From<usize> for Diagonal {
+  fn from(d: usize) -> Diagonal {
+    match d {
+      0 => Diagonal::First,
+      1 => Diagonal::Second,
+      _ => panic!()
+    }
+  }
+}
+
 pub enum SquareLine {
   Row(usize),
   Col(usize),
   Diag(Diagonal)
+}
+
+impl SquareLine {
+  pub fn sum(&self, square: &Square) -> usize {
+    square.sum_of(self)
+  }
+}
+
+pub struct LineIter {
+  a: usize,
+  i: usize,
+  is_col: bool
+}
+
+impl Iterator for LineIter {
+  type Item = SquareLine;
+
+  fn next(&mut self) -> Option<SquareLine> {
+    if self.i >= self.a + 2 {
+      return None;
+    }
+
+    if self.i >= self.a {
+      let diag = self.i - self.a;
+      self.i = self.i + 1;
+      return Some(SquareLine::Diag(Diagonal::from(diag)));
+    }
+
+    if self.is_col {
+      let result = SquareLine::Col(self.i);
+
+      self.is_col = false;
+      self.i = self.i + 1;
+
+      return Some(result);
+    } else {
+      let result = SquareLine::Row(self.i);
+
+      self.is_col = true;
+
+      return Some(result);
+    }
+  }
+}
+
+
+impl<'a> From<&'a Square> for LineIter {
+  fn from(square: &'a Square) -> LineIter {
+    LineIter {
+      a: square.a,
+      i: 0,
+      is_col: false
+    }
+  }
 }
 
 pub struct SquareIter<'a> {
@@ -43,7 +107,6 @@ impl<'a> Iterator for SquareIter<'a> {
     self.i = self.i + 1;
 
     Some(value)
-
   }
 }
 
@@ -60,22 +123,16 @@ impl Square {
     }
   }
 
+  pub fn get_expected_sum(&self) -> usize {
+    (self.a * ( (self.a * self.a) + 1)) / 2
+  }
+
   pub fn is_magic(&self) -> bool {
-    for i in 0..self.a {
-      let row_sum = self.row_sum(i);
-      let col_sum = self.col_sum(i);
-      return_if!(row_sum != 15, false);
-      return_if!(col_sum != 15, false);
-    }
+    let expected_sum = self.get_expected_sum();
 
-    {
-      let sum = self.diag_sum(&Diagonal::First);
-      return_if!(sum != 15, false);
-    }
-
-    {
-      let sum = self.diag_sum(&Diagonal::Second);
-      return_if!(sum != 15, false);
+    for line in LineIter::from(self) {
+      let sum = line.sum(self);
+      return_if!(sum != expected_sum, false);
     }
 
     return true;
@@ -94,6 +151,8 @@ impl Square {
   }
 
   pub fn row<'a>(&'a self, r: usize) -> SquareIter<'a> {
+    assert!(r < self.a);
+
     SquareIter {
       square: self,
       start: r * self.a,
@@ -103,6 +162,8 @@ impl Square {
   }
 
   pub fn col<'a>(&'a self, c: usize) -> SquareIter<'a> {
+    assert!(c < self.a);
+
     SquareIter {
       square: self,
       start: c,
@@ -128,19 +189,6 @@ impl Square {
       }
     }
   }
-
-  fn row_sum(&self, r: usize) -> usize {
-    self.row(r).fold(0, |acc, &x| acc + x)
-  }
-
-  fn col_sum(&self, c: usize) -> usize {
-    self.col(c).fold(0, |acc, &x| acc + x)
-  }
-
-  fn diag_sum(&self, d: &Diagonal) -> usize {
-    self.diag(d).fold(0, |acc, &x| acc + x)
-  }
-
 }
 
 #[cfg(test)]
@@ -206,5 +254,13 @@ mod test {
     let square = Square::new(vec![8, 1, 6, 7, 5, 3, 4, 9, 2]);
 
     assert_eq!(false, square.is_magic());
+  }
+
+  #[test]
+  fn test_big() {
+    let square = Square::new(vec![25, 13, 1, 19, 7, 16, 9, 22, 15, 3, 12, 5,
+            18, 6, 24, 8, 21, 14, 2, 20, 4, 17, 10, 23, 11]);
+
+    assert_eq!(true, square.is_magic());
   }
 }
