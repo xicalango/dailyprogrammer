@@ -336,10 +336,22 @@ mod test {
   }
 
   #[test]
+  #[should_panic]
+  fn test_not_completable_1() {
+    Square::try_new(vec![1,2,3]);
+  }
+
+  #[test]
+  #[should_panic]
+  fn test_not_completable_2() {
+    Square::try_new(vec![1,2,3,4,5,6,7,8,9]);
+  }
+
+  #[test]
   fn test_complete_1() {
     let square = Square::try_new(vec![8, 1, 6, 3, 5, 7]).unwrap();
     assert!(square.is_magic());
-    
+
     square.render();
   }
 
