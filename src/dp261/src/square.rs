@@ -12,15 +12,39 @@ pub struct Square {
   data: Vec<usize>
 }
 
-enum Diagonal {
+pub enum Diagonal {
   First,
   Second
 }
 
-enum SquareLine {
+pub enum SquareLine {
   Row(usize),
   Col(usize),
   Diag(Diagonal)
+}
+
+pub struct SquareIter<'a> {
+  square: &'a Square,
+  start: usize,
+  jump: usize,
+  i: usize
+}
+
+impl<'a> Iterator for SquareIter<'a> {
+  type Item = &'a usize;
+
+  fn next(&mut self) -> Option<&'a usize> {
+
+    if self.i >= self.square.a {
+      return None;
+    }
+
+    let value = &self.square.data[self.start + self.i * self.jump];
+    self.i = self.i + 1;
+
+    Some(value)
+
+  }
 }
 
 impl Square {
@@ -37,94 +61,85 @@ impl Square {
   }
 
   pub fn is_magic(&self) -> bool {
-    let first_sum = self.row_sum(0);
-
-    for i in 1..self.a {
-      let sum = self.row_sum(i);
-      return_if!(sum != first_sum, false);
-    }
-
     for i in 0..self.a {
-      let sum = self.col_sum(i);
-      return_if!(sum != first_sum, false);
+      let row_sum = self.row_sum(i);
+      let col_sum = self.col_sum(i);
+      return_if!(row_sum != 15, false);
+      return_if!(col_sum != 15, false);
     }
 
     {
       let sum = self.diag_sum(&Diagonal::First);
-      return_if!(sum != first_sum, false);
+      return_if!(sum != 15, false);
     }
 
     {
       let sum = self.diag_sum(&Diagonal::Second);
-      return_if!(sum != first_sum, false);
+      return_if!(sum != 15, false);
     }
 
     return true;
   }
 
-  fn sum_of(&self, line: &SquareLine) -> usize {
+  pub fn sum_of(&self, line: &SquareLine) -> usize {
+    self.get_iter(line).fold(0, |acc, &x| acc + x)
+  }
+
+  pub fn get_iter<'a, 'b>(&'a self, line: &'b SquareLine) -> SquareIter<'a> {
     match line {
-      &SquareLine::Row(r) => self.row_sum(r),
-      &SquareLine::Col(c) => self.col_sum(c),
-      &SquareLine::Diag(ref d) => self.diag_sum(d)
+      &SquareLine::Row(r) => self.row(r),
+      &SquareLine::Col(c) => self.col(c),
+      &SquareLine::Diag(ref d) => self.diag(d)
+    }
+  }
+
+  pub fn row<'a>(&'a self, r: usize) -> SquareIter<'a> {
+    SquareIter {
+      square: self,
+      start: r * self.a,
+      jump: 1,
+      i: 0
+    }
+  }
+
+  pub fn col<'a>(&'a self, c: usize) -> SquareIter<'a> {
+    SquareIter {
+      square: self,
+      start: c,
+      jump: self.a,
+      i: 0
+    }
+  }
+
+  pub fn diag<'a>(&'a self, d: &Diagonal) -> SquareIter<'a> {
+    match d {
+      &Diagonal::First => SquareIter {
+        square: self,
+        start: 0,
+        jump: self.a + 1,
+        i: 0
+      },
+
+      &Diagonal::Second => SquareIter {
+        square: self,
+        start: self.a - 1,
+        jump: self.a - 1,
+        i: 0
+      }
     }
   }
 
   fn row_sum(&self, r: usize) -> usize {
-    let mut sum = 0;
-
-    let start = r * self.a;
-
-    for i in 0..self.a {
-      sum = sum + self.data[start + i];
-    }
-
-    sum
+    self.row(r).fold(0, |acc, &x| acc + x)
   }
 
-  fn col_sum(&self, u: usize) -> usize {
-    let mut sum = 0;
-
-    for i in 0..self.a {
-      sum = sum + self.data[u + self.a * i];
-    }
-
-    sum
+  fn col_sum(&self, c: usize) -> usize {
+    self.col(c).fold(0, |acc, &x| acc + x)
   }
 
   fn diag_sum(&self, d: &Diagonal) -> usize {
-    match d {
-      &Diagonal::First => self.diag_sum_first(),
-      &Diagonal::Second => self.diag_sum_second()
-    }
+    self.diag(d).fold(0, |acc, &x| acc + x)
   }
-
-  fn diag_sum_first(&self) -> usize {
-    let mut sum = 0;
-
-    let jump = self.a + 1;
-
-    for i in 0..self.a {
-      sum = sum + self.data[i * jump];
-    }
-
-    sum
-  }
-
-  fn diag_sum_second(&self) -> usize {
-    let mut sum = 0;
-
-    let start = self.a - 1;
-
-    for i in 0..self.a {
-      let index = start + i * start;
-      println!("diag2: i: {} index: {} data: {}", i, index, self.data[index]);
-      sum = sum + self.data[index]
-    }
-
-    sum
-  }
-
 
 }
 
@@ -133,10 +148,36 @@ mod test {
 
   use super::*;
 
+  fn test_square() -> Square {
+    Square::new(vec![8, 1, 6, 3, 5, 7, 4, 9, 2])
+  }
+
   #[test]
   #[should_panic]
   fn test_non_square() {
     Square::new(vec![1, 2]);
+  }
+
+  #[test]
+  fn test_row_iterator() {
+    let square = test_square();
+
+    assert_eq!(vec![8, 1, 6], square.row(0).map(|v| v.clone()).collect::<Vec<usize>>());
+  }
+
+  #[test]
+  fn test_col_iterator() {
+    let square = test_square();
+
+    assert_eq!(vec![8, 3, 4], square.col(0).map(|v| v.clone()).collect::<Vec<usize>>());
+  }
+
+  #[test]
+  fn test_diag_iterator() {
+    let square = test_square();
+
+    assert_eq!(vec![8, 5, 2], square.diag(&Diagonal::First).map(|v| v.clone()).collect::<Vec<usize>>());
+    assert_eq!(vec![6, 5, 4], square.diag(&Diagonal::Second).map(|v| v.clone()).collect::<Vec<usize>>());
   }
 
   #[test]
