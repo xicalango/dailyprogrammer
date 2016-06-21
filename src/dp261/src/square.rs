@@ -129,8 +129,7 @@ impl Square {
   pub fn try_new(data: Vec<usize>) -> Option<Square> {
     let len = data.len();
     let s = ((4 * len + 1) as f64).sqrt() as usize;
-
-    let a_candidate = (s+1)/2;
+    let a_candidate = (s + 1)/2;
 
     assert_eq!(a_candidate * (a_candidate - 1), len);
 
@@ -144,18 +143,13 @@ impl Square {
 
     let num_missing = (a*a) - begin_len;
 
-    let mut work_data = vec![1; num_missing];
+    try_data.extend_from_slice( &vec![1; num_missing]);
 
-    assert_eq!(a * a, try_data.len() + work_data.len());
+    assert_eq!(a * a, try_data.len());
 
     let mut done = false;
 
     while !done {
-      try_data.resize( begin_len, 0 );
-      try_data.extend_from_slice( &work_data );
-
-      assert_eq!(a * a, try_data.len());
-
       {
         let square = Square::from(try_data.clone());
 
@@ -164,18 +158,17 @@ impl Square {
         }
       }
 
-
-      let mut cur = 0;
+      let mut cur = begin_len;
 
       loop {
-        if cur == work_data.len() {
+        if cur == try_data.len() {
           done = true;
           break;
         }
 
-        work_data[cur] = work_data[cur] + 1;
-        if work_data[cur] > 9 {
-          work_data[cur] = 1;
+        try_data[cur] = try_data[cur] + 1;
+        if try_data[cur] > 9 {
+          try_data[cur] = 1;
           cur = cur + 1;
         } else {
           break;
