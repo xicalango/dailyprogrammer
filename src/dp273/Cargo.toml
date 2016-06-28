@@ -1,0 +1,7 @@
+[package]
+name = "dp273"
+version = "0.1.0"
+authors = ["Alexander Weld <weldale@gmail.com>"]
+
+[dependencies]
+regex = "0.1"
